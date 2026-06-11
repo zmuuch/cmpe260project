@@ -49,6 +49,27 @@ class Lexer:
             if ch.isspace():
                 self.pos += 1
                 continue
+            
+            # comment handling 
+
+            if (
+                self.pos + 1 < len(self.source)
+                and self.source[self.pos:self.pos+2] == "(*"
+            ):
+
+                self.pos += 2
+
+                while (
+                    self.pos + 1 < len(self.source)
+                    and self.source[self.pos:self.pos+2] != "*)"
+                ):
+                    self.pos += 1
+
+                if self.pos + 1 >= len(self.source):
+                    raise Exception("Unterminated comment")
+
+                self.pos += 2
+                continue
 
             # integers
             if ch.isdigit():
@@ -173,11 +194,16 @@ class Program:
     def __init__(self, block):
         self.block = block
 
+    def __repr__(self):
+        return f"Program({self.block})"
+
 
 class Block:
     def __init__(self, statements, final_expr):
         self.statements = statements
         self.final_expr = final_expr
+    def __repr__(self):
+        return f"Block({self.statements}, {self.final_expr})"
 
 
 class IntLit:
@@ -191,6 +217,8 @@ class IntLit:
 class BoolLit:
     def __init__(self, value):
         self.value = value
+    def __repr__(self):
+        return f"BoolLit({self.value})"
 
 
 class VarExpr:
@@ -223,6 +251,8 @@ class LetStmt:
     def __init__(self, name, value):
         self.name = name
         self.value = value
+    def __repr__(self):
+        return f"LetStmt({self.name}, {self.value})"
 
 
 class AssignStmt:
@@ -234,19 +264,34 @@ class AssignStmt:
 class PrintStmt:
     def __init__(self, expr):
         self.expr = expr
-
+    def __repr__(self):
+        return f"PrintStmt({self.expr})"
 
 class IfExpr:
     def __init__(self, cond, then_branch, else_branch):
         self.cond = cond
         self.then_branch = then_branch
         self.else_branch = else_branch
+    def __repr__(self):
+        return (
+            f"IfExpr({self.cond}, "
+            f"{self.then_branch}, "
+            f"{self.else_branch})"
+        )
 
+class ExprStmt:
+    def __init__(self, expr):
+        self.expr = expr
+
+    def __repr__(self):
+        return f"ExprStmt({self.expr})"
 
 class FunExpr:
     def __init__(self, params, body):
         self.params = params
         self.body = body
+    def __repr__(self):
+        return f"FunExpr({self.params}, {self.body})"
 
 
 class CallExpr:
@@ -254,6 +299,8 @@ class CallExpr:
         self.func = func
         self.args = args
 
+    def __repr__(self):
+        return f"CallExpr({self.func}, {self.args})"
 
 # PARSER
 
@@ -281,13 +328,113 @@ class Parser:
             )
 
     def parse(self):
-        return self.parse_expression() #temporary without blocks
+
+        block = self.parse_block()
+
+        self.eat("EOF")
+
+        return Program(block)
 
     def parse_block(self):
-        pass
 
+        statements = []
+        final_expr = None
+
+        while True:
+
+            token = self.current()
+
+            if token.type == "LET":
+
+                stmt = self.parse_statement()
+                self.eat("SEMICOLON")
+                statements.append(stmt)
+                continue
+
+            if token.type == "PRINT":
+
+                stmt = self.parse_statement()
+                self.eat("SEMICOLON")
+                statements.append(stmt)
+                continue
+
+            if (
+                token.type == "IDENTIFIER"
+                and self.peek().type == "ASSIGN"
+            ):
+
+                stmt = self.parse_statement()
+                self.eat("SEMICOLON")
+                statements.append(stmt)
+                continue
+
+            break
+
+        if self.current().type not in (
+            "EOF",
+            "END",
+            "ELSE"
+        ):
+            final_expr = self.parse_expression()
+
+        return Block(
+            statements,
+            final_expr
+        )
     def parse_statement(self):
-        pass
+
+        token = self.current()
+
+        # let x = expr
+
+        if token.type == "LET":
+
+            self.eat("LET")
+
+            name = self.current().value
+
+            self.eat("IDENTIFIER")
+
+            self.eat("ASSIGN")
+
+            value = self.parse_expression()
+
+            return LetStmt(name, value)
+
+        # print(expr)
+
+        if token.type == "PRINT":
+
+            self.eat("PRINT")
+
+            self.eat("LPAREN")
+
+            expr = self.parse_expression()
+
+            self.eat("RPAREN")
+
+            return PrintStmt(expr)
+
+        # x = expr
+
+        if (
+            token.type == "IDENTIFIER"
+            and self.peek().type == "ASSIGN"
+        ):
+
+            name = token.value
+
+            self.eat("IDENTIFIER")
+
+            self.eat("ASSIGN")
+
+            value = self.parse_expression()
+
+            return AssignStmt(name, value)
+
+        raise Exception(
+            f"Expected statement, got {token.type}"
+        )
 
     def parse_expression(self):
         return self.parse_or()
@@ -295,13 +442,67 @@ class Parser:
     # precedence chain
 
     def parse_comparison(self):
-        return self.parse_add()
+
+        expr = self.parse_add()
+
+        if self.current().type in (
+            "EQ",
+            "NEQ",
+            "LT",
+            "GT",
+            "LE",
+            "GE"
+        ):
+
+            op = self.current().value
+
+            self.eat(self.current().type)
+
+            right = self.parse_add()
+
+            expr = BinOp(
+                op,
+                expr,
+                right
+            )
+
+        return expr
 
     def parse_and(self):
-        return self.parse_comparison()
 
+        expr = self.parse_comparison()
+
+        while self.current().type == "AND":
+
+            self.eat("AND")
+
+            right = self.parse_comparison()
+
+            expr = BinOp(
+                "and",
+                expr,
+                right
+            )
+
+        return expr
+    
     def parse_or(self):
-        return self.parse_and()
+
+        expr = self.parse_and()
+
+        while self.current().type == "OR":
+
+            self.eat("OR")
+
+            right = self.parse_and()
+
+            expr = BinOp(
+                "or",
+                expr,
+                right
+            )
+
+        return expr
 
     def parse_add(self):
 
@@ -372,9 +573,100 @@ class Parser:
             )
 
         return self.parse_call()
+    
+    def parse_if(self):
+
+        self.eat("IF")
+
+        cond = self.parse_expression()
+
+        self.eat("THEN")
+
+        then_branch = self.parse_block()
+
+        self.eat("ELSE")
+
+        else_branch = self.parse_block()
+
+        self.eat("END")
+
+        return IfExpr(
+            cond,
+            then_branch,
+            else_branch
+        )
+
+    def parse_fun(self):
+
+        self.eat("FUN")
+
+        self.eat("LPAREN")
+
+        params = []
+
+        if self.current().type != "RPAREN":
+
+            params.append(
+                self.current().value
+            )
+
+            self.eat("IDENTIFIER")
+
+            while self.current().type == "COMMA":
+
+                self.eat("COMMA")
+
+                params.append(
+                    self.current().value
+                )
+
+                self.eat("IDENTIFIER")
+
+        self.eat("RPAREN")
+
+        self.eat("ARROW")
+
+        body = self.parse_block()
+
+        self.eat("END")
+
+        return FunExpr(
+            params,
+            body
+        )
 
     def parse_call(self):
-        return self.parse_primary()
+
+        expr = self.parse_primary()
+
+        while self.current().type == "LPAREN":
+
+            self.eat("LPAREN")
+
+            args = []
+
+            if self.current().type != "RPAREN":
+
+                args.append(
+                    self.parse_expression()
+                )
+
+                while self.current().type == "COMMA":
+
+                    self.eat("COMMA")
+
+                    args.append(
+                        self.parse_expression()
+                    )
+
+            self.eat("RPAREN")
+
+            expr = CallExpr(
+                expr,
+                args
+            )
+
+        return expr
 
     def parse_primary(self):
         token = self.current()
@@ -404,6 +696,12 @@ class Parser:
             self.eat("RPAREN")
 
             return expr
+        
+        if token.type == "IF":
+            return self.parse_if()
+
+        if token.type == "FUN":
+            return self.parse_fun()
 
         raise Exception(
             f"Unexpected token {token.type}"
@@ -487,8 +785,22 @@ class Evaluator:
 
         elif isinstance(node, LetStmt):
 
-            value = self.eval(node.value, env)
-            env.define(node.name, value)
+            if isinstance(node.value, FunExpr):
+
+                env.define(node.name, None)
+
+                closure = Closure(
+                    node.value.params,
+                    node.value.body,
+                    env
+                )
+
+                env.update(node.name, closure)
+
+            else:
+
+                value = self.eval(node.value, env)
+                env.define(node.name, value)
 
             return None
 
@@ -498,11 +810,16 @@ class Evaluator:
             env.update(node.name, value)
 
             return None
-
         elif isinstance(node, PrintStmt):
 
             value = self.eval(node.expr, env)
-            print(value)
+
+            if value is True:
+                print("true")
+            elif value is False:
+                print("false")
+            else:
+                print(value)
 
             return None
 
@@ -528,10 +845,18 @@ class Evaluator:
                 node.body,
                 env
             )
+        
+        elif isinstance(node, ExprStmt):
+
+            self.eval(node.expr, env)
+
+            return None
 
         elif isinstance(node, CallExpr):
 
             closure = self.eval(node.func, env)
+            if not isinstance(closure, Closure):
+                raise Exception("Attempted to call non-function")
 
             new_env = Environment(closure.env)
 
@@ -550,10 +875,63 @@ class Evaluator:
         raise Exception("Unknown AST node")
 
     def eval_binop(self, node, env):
-        pass
+
+        left = self.eval(node.left, env)
+        right = self.eval(node.right, env)
+
+        if node.op == "+":
+            return left + right
+
+        if node.op == "-":
+            return left - right
+
+        if node.op == "*":
+            return left * right
+
+        if node.op == "/":
+
+            if right == 0:
+                raise Exception("Division by zero")
+
+            return int(left / right)
+
+        if node.op == "==":
+            return left == right
+
+        if node.op == "!=":
+            return left != right
+
+        if node.op == "<":
+            return left < right
+
+        if node.op == ">":
+            return left > right
+
+        if node.op == "<=":
+            return left <= right
+
+        if node.op == ">=":
+            return left >= right
+
+        if node.op == "and":
+            return left and right
+
+        if node.op == "or":
+            return left or right
+
+        raise Exception(f"Unknown operator {node.op}")
 
     def eval_unary(self, node, env):
-        pass
+
+        value = self.eval(node.expr, env)
+
+        if node.op == "-":
+            return -value
+
+        if node.op == "not":
+            return not value
+
+        raise Exception(f"Unknown unary operator {node.op}")
 
 
 # MAIN CODE BELOW
@@ -575,7 +953,17 @@ def main():
 
         ast = parser.parse()
 
-        print(ast)
+        global_env = Environment()
+
+        evaluator = Evaluator()
+
+        result = evaluator.eval(
+            ast,
+            global_env
+        )
+
+        if result is not None:
+            print(result)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
 

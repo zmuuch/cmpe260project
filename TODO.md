@@ -1,0 +1,1 @@
+- let the program print errors to stderr
