@@ -859,7 +859,10 @@ class Evaluator:
                 raise Exception("Attempted to call non-function")
 
             new_env = Environment(closure.env)
-
+            if len(node.args) != len(closure.params):
+                raise Exception(
+                    f"Expected {len(closure.params)} arguments, got {len(node.args)}"
+                )
             for param, arg in zip(
                 closure.params,
                 node.args
@@ -962,10 +965,10 @@ def main():
             global_env
         )
 
-        if result is not None:
-            print(result)
+
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
