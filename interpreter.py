@@ -1,13 +1,10 @@
 # Azra Zülal Muhcu, 2024400372
 # Mustafa Şahin, 2023400162
 
-
-
 import sys
 
-# ==================================================
 # TOKENS
-# ==================================================
+
 
 class Token:
     def __init__(self, type_, value):
@@ -18,9 +15,7 @@ class Token:
         return f"Token({self.type}, {self.value})"
 
 
-# ==================================================
 # LEXER
-# ==================================================
 
 class Lexer:
 
@@ -31,30 +26,148 @@ class Lexer:
     def tokenize(self):
         tokens = []
 
+        keywords = {
+            "let": "LET",
+            "print": "PRINT",
+            "if": "IF",
+            "then": "THEN",
+            "else": "ELSE",
+            "end": "END",
+            "fun": "FUN",
+            "true": "TRUE",
+            "false": "FALSE",
+            "and": "AND",
+            "or": "OR",
+            "not": "NOT"
+        }
+
         while self.pos < len(self.source):
 
             ch = self.source[self.pos]
 
+            # whitespace
             if ch.isspace():
                 self.pos += 1
                 continue
 
-            # TODO:
-            # identifiers
-            # keywords
             # integers
-            # operators
-            # punctuation
+            if ch.isdigit():
 
-            raise Exception(f"Unexpected character: {ch}")
+                start = self.pos
 
-        tokens.append(Token("EOF", None))
+                while (
+                    self.pos < len(self.source)
+                    and self.source[self.pos].isdigit()
+                ):
+                    self.pos += 1
+
+                value = self.source[start:self.pos]
+
+                tokens.append(
+                    Token("INTEGER", int(value))
+                )
+
+                continue
+
+            # identifiers / keywords
+            if ch.isalpha():
+
+                start = self.pos
+
+                while (
+                    self.pos < len(self.source)
+                    and (
+                        self.source[self.pos].isalnum()
+                        or self.source[self.pos] == "_"
+                    )
+                ):
+                    self.pos += 1
+
+                word = self.source[start:self.pos]
+
+                token_type = keywords.get(
+                    word,
+                    "IDENTIFIER"
+                )
+
+                tokens.append(
+                    Token(token_type, word)
+                )
+
+                continue
+
+            # two-character operators
+
+            if (
+                self.pos + 1 < len(self.source)
+            ):
+
+                two = self.source[
+                    self.pos:self.pos+2
+                ]
+
+                two_char = {
+                    "==": "EQ",
+                    "!=": "NEQ",
+                    "<=": "LE",
+                    ">=": "GE",
+                    "->": "ARROW"
+                }
+
+                if two in two_char:
+
+                    tokens.append(
+                        Token(
+                            two_char[two],
+                            two
+                        )
+                    )
+
+                    self.pos += 2
+                    continue
+
+            # one-character tokens
+
+            single = {
+                "+": "PLUS",
+                "-": "MINUS",
+                "*": "STAR",
+                "/": "SLASH",
+                "=": "ASSIGN",
+                "<": "LT",
+                ">": "GT",
+                "(": "LPAREN",
+                ")": "RPAREN",
+                ",": "COMMA",
+                ";": "SEMICOLON"
+            }
+
+            if ch in single:
+
+                tokens.append(
+                    Token(
+                        single[ch],
+                        ch
+                    )
+                )
+
+                self.pos += 1
+                continue
+
+            raise Exception(
+                f"Unexpected character: {ch}"
+            )
+
+        tokens.append(
+            Token("EOF", None)
+        )
+
         return tokens
 
 
-# ==================================================
+
+
 # AST NODES
-# ==================================================
 
 class Program:
     def __init__(self, block):
@@ -71,6 +184,9 @@ class IntLit:
     def __init__(self, value):
         self.value = value
 
+    def __repr__(self):
+        return f"IntLit({self.value})"
+
 
 class BoolLit:
     def __init__(self, value):
@@ -81,6 +197,9 @@ class VarExpr:
     def __init__(self, name):
         self.name = name
 
+    def __repr__(self):
+        return f"VarExpr({self.name})"
+
 
 class BinOp:
     def __init__(self, op, left, right):
@@ -88,12 +207,17 @@ class BinOp:
         self.left = left
         self.right = right
 
+    def __repr__(self):
+        return f"BinOp({self.op}, {self.left}, {self.right})"
+
 
 class UnaryOp:
     def __init__(self, op, expr):
         self.op = op
         self.expr = expr
 
+    def __repr__(self):
+        return f"UnaryOp({self.op}, {self.expr})"
 
 class LetStmt:
     def __init__(self, name, value):
@@ -131,9 +255,7 @@ class CallExpr:
         self.args = args
 
 
-# ==================================================
 # PARSER
-# ==================================================
 
 class Parser:
 
@@ -144,6 +266,12 @@ class Parser:
     def current(self):
         return self.tokens[self.pos]
 
+    def peek(self):
+        if self.pos + 1 < len(self.tokens):
+            return self.tokens[self.pos + 1]
+
+        return Token("EOF", None)
+
     def eat(self, token_type):
         if self.current().type == token_type:
             self.pos += 1
@@ -153,8 +281,7 @@ class Parser:
             )
 
     def parse(self):
-        block = self.parse_block()
-        return Program(block)
+        return self.parse_expression() #temporary without blocks
 
     def parse_block(self):
         pass
@@ -167,34 +294,123 @@ class Parser:
 
     # precedence chain
 
-    def parse_or(self):
-        pass
+    def parse_comparison(self):
+        return self.parse_add()
 
     def parse_and(self):
-        pass
+        return self.parse_comparison()
 
-    def parse_comparison(self):
-        pass
+    def parse_or(self):
+        return self.parse_and()
 
     def parse_add(self):
-        pass
+
+        expr = self.parse_mul()
+
+        while self.current().type in (
+            "PLUS",
+            "MINUS"
+        ):
+
+            op = self.current().value
+
+            self.eat(self.current().type)
+
+            right = self.parse_mul()
+
+            expr = BinOp(
+                op,
+                expr,
+                right
+            )
+
+        return expr
 
     def parse_mul(self):
-        pass
+
+        expr = self.parse_unary()
+
+        while self.current().type in (
+            "STAR",
+            "SLASH"
+        ):
+
+            op = self.current().value
+
+            self.eat(self.current().type)
+
+            right = self.parse_unary()
+
+            expr = BinOp(
+                op,
+                expr,
+                right
+            )
+
+        return expr
 
     def parse_unary(self):
-        pass
+
+        token = self.current()
+
+        if token.type == "MINUS":
+
+            self.eat("MINUS")
+
+            return UnaryOp(
+                "-",
+                self.parse_unary()
+            )
+
+        if token.type == "NOT":
+
+            self.eat("NOT")
+
+            return UnaryOp(
+                "not",
+                self.parse_unary()
+            )
+
+        return self.parse_call()
 
     def parse_call(self):
-        pass
+        return self.parse_primary()
 
     def parse_primary(self):
-        pass
+        token = self.current()
+
+        if token.type == "INTEGER":
+            self.eat("INTEGER")
+            return IntLit(token.value)
+
+        if token.type == "TRUE":
+            self.eat("TRUE")
+            return BoolLit(True)
+
+        if token.type == "FALSE":
+            self.eat("FALSE")
+            return BoolLit(False)
+
+        if token.type == "IDENTIFIER":
+            self.eat("IDENTIFIER")
+            return VarExpr(token.value)
+
+        if token.type == "LPAREN":
+
+            self.eat("LPAREN")
+
+            expr = self.parse_expression()
+
+            self.eat("RPAREN")
+
+            return expr
+
+        raise Exception(
+            f"Unexpected token {token.type}"
+        )
 
 
-# ==================================================
 # ENVIRONMENT
-# ==================================================
 
 class Environment:
 
@@ -228,9 +444,7 @@ class Environment:
         raise Exception(f"Undefined variable: {name}")
 
 
-# ==================================================
 # CLOSURE
-# ==================================================
 
 class Closure:
 
@@ -240,9 +454,8 @@ class Closure:
         self.env = env
 
 
-# ==================================================
-# EVALUATOR
-# ==================================================
+# EVALUATOR BELOW
+
 
 class Evaluator:
 
@@ -343,35 +556,28 @@ class Evaluator:
         pass
 
 
-# ==================================================
-# MAIN
-# ==================================================
+# MAIN CODE BELOW
 
 def main():
+    try:
+        if len(sys.argv) != 2:
+            sys.exit(1)
 
-    if len(sys.argv) != 2:
-        print(
-            "Usage: python interpreter.py program.txt"
-        )
-        sys.exit(1)
+        filename = sys.argv[1]
 
-    filename = sys.argv[1]
+        with open(filename, "r") as f:
+            source = f.read()
 
-    with open(filename, "r") as f:
-        source = f.read()
+        lexer = Lexer(source)
+        tokens = lexer.tokenize()
 
-    lexer = Lexer(source)
-    tokens = lexer.tokenize()
+        parser = Parser(tokens)
 
-    parser = Parser(tokens)
-    ast = parser.parse()
+        ast = parser.parse()
 
-    global_env = Environment()
-
-    evaluator = Evaluator()
-
-    evaluator.eval(ast, global_env)
-
+        print(ast)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()

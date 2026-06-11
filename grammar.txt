@@ -15,10 +15,6 @@
 
 <expr_stmt> ::= <expr>
 
-(* ================================================= *)
-(* Expressions - precedence from lowest to highest   *)
-(* ================================================= *)
-
 <expr> ::= <or_expr>
 
 <or_expr> ::= <and_expr>
@@ -46,9 +42,6 @@
 <arguments> ::= <expr>
               { "," <expr> }
 
-(* ================================================= *)
-(* Primary expressions                               *)
-(* ================================================= *)
 
 <primary_expr> ::= <integer>
                  | <boolean>
@@ -74,15 +67,12 @@
 <params> ::= <identifier>
            { "," <identifier> }
 
-(* ================================================= *)
-(* Lexical elements                                  *)
-(* ================================================= *)
 
 <boolean> ::= "true"
             | "false"
 
 <integer> ::= <digit>
-            { <digit> }
+            { <digit> } 
 
 <identifier> ::= <letter>
                  { <letter> | <digit> | "_" }
