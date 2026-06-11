@@ -1,0 +1,25 @@
+(* basics.txt *)
+(* Calculates the area of a trapezoid and performs boolean logic checks. *)
+(* expected out:
+45
+true
+false
+*)
+
+
+(* declarations *)
+let base1 = 10;
+let base2 = 20;
+let height = 3;
+
+(* arithmetic operations *)
+let area = (base1 + base2) * height / 2;
+
+print(area);
+
+(* comparisons *)
+let is_large = area >= 40;
+print(is_large);
+
+let is_huge = area > 100 and is_large;
+print(is_huge);

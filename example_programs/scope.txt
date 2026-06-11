@@ -1,0 +1,20 @@
+(* scope.txt *)
+(* Demonstrates that closures preserve their defining environment in static scoping. *)
+(* expected out:
+5
+*)
+
+
+let val = 5;
+
+(* since static scoping, the defining env's val = 5 is used *)
+let get_val = fun() -> 
+    val 
+end;
+
+let test_scope = fun() ->
+    let val = 99;
+    get_val()   (* which val is used? *)
+end;
+
+print(test_scope());

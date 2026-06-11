@@ -1,0 +1,22 @@
+(* closures.txt *)
+(* expected out:
+150
+120
+*)
+
+let create_closure = fun(in) ->
+    let closed = in;
+    fun(x) -> (* fun captures variable: closed *)
+        closed = closed + x;
+        closed
+    end
+end;
+
+let c = create_closure(100);
+(* set closed = 100 *)
+
+(* call fun(50): closed is updated to 150 *)
+print(c(50));
+
+(* call fun(-30): closed is updated to 120 *)
+print(c(-30));

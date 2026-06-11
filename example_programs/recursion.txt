@@ -1,0 +1,16 @@
+(* recursion.txt *)
+(* Calculates the 10th Fibonacci number using recursion. *)
+(* expected out:
+55
+*)
+
+
+let fib = fun(n) ->
+    if n <= 1 then
+        n                          (* base case *)
+    else
+        fib(n - 1) + fib(n - 2)    (* recursive case *)
+    end
+end;
+
+print(fib(10)); 
