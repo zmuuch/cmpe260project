@@ -1,84 +1,84 @@
-<program> ::= <block>
+<program>         ::= <block>
 
-<block> ::= { <statement> ";" } [ <expr> ]
+<block>           ::= { <statement> ";" } [ <expr> ]
 
-<statement> ::= <let_stmt>
-              | <assign_stmt>
-              | <print_stmt>
-              | <expr_stmt>
+<statement>       ::= <let_stmt>
+                    | <assign_stmt>
+                    | <print_stmt>
+                    | <expr_stmt>
 
-<let_stmt> ::= "let" <identifier> "=" <expr>
+<let_stmt>        ::= "let" <identifier> "=" <expr>
 
-<assign_stmt> ::= <identifier> "=" <expr>
+<assign_stmt>     ::= <identifier> "=" <expr>
 
-<print_stmt> ::= "print" "(" <expr> ")"
+<print_stmt>      ::= "print" "(" <expr> ")"
 
-<expr_stmt> ::= <expr>
+<expr_stmt>       ::= <expr>
 
-<expr> ::= <or_expr>
+<expr>            ::= <or_expr>
 
-<or_expr> ::= <and_expr>
-            { "or" <and_expr> }
+<or_expr>         ::= <and_expr>
+                    { "or" <and_expr> }
 
-<and_expr> ::= <comparison_expr>
-             { "and" <comparison_expr> }
+<and_expr>        ::= <comparison_expr>
+                    { "and" <comparison_expr> }
 
-<comparison_expr> ::= <add_expr>
-                    [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" )
-                      <add_expr> ]
+<comparison_expr> ::= <add_expr> [ <comp_op> <add_expr> ]
 
-<add_expr> ::= <mul_expr>
-             { ( "+" | "-" ) <mul_expr> }
+<comp_op>         ::= "==" | "!=" | "<" | ">" | "<=" | ">="
 
-<mul_expr> ::= <unary_expr>
-             { ( "*" | "/" ) <unary_expr> }
+<add_expr>        ::= <mult_expr> { <add_op> <mult_expr> }
 
-<unary_expr> ::= [ "not" | "-" ]
-                 <call_expr>
+<add_op>          ::= "+" | "-"
 
-<call_expr> ::= <primary_expr>
-              { "(" [ <arguments> ] ")" }
+<mult_expr>       ::= <unary_expr> { <mult_op> <unary_expr> }
 
-<arguments> ::= <expr>
-              { "," <expr> }
+<mult_op>         ::= "*" | "/"
 
+<unary_expr>      ::= { "not" | "-" }
+                      <call_expr>
 
-<primary_expr> ::= <integer>
-                 | <boolean>
-                 | <identifier>
-                 | "(" <expr> ")"
-                 | <if_expr>
-                 | <fun_expr>
+<call_expr>       ::= <primary_expr>
+                    { "(" [ <arguments> ] ")" }
 
-<if_expr> ::= "if"
-              <expr>
-              "then"
-              <block>
-              "else"
-              <block>
-              "end"
+<arguments>       ::= <expr>
+                    { "," <expr> }
 
-<fun_expr> ::= "fun"
-               "(" [ <params> ] ")"
-               "->"
-               <block>
-               "end"
+<primary_expr>    ::= <integer>
+                    | <boolean>
+                    | <identifier>
+                    | "(" <expr> ")"
+                    | <if_expr>
+                    | <fun_expr>
 
-<params> ::= <identifier>
-           { "," <identifier> }
+<if_expr>         ::= "if"
+                      <expr>
+                      "then"
+                      <block>
+                      "else"
+                      <block>
+                      "end"
 
+<fun_expr>        ::= "fun"
+                      "(" [ <params> ] ")"
+                      "->"
+                      <block>
+                      "end"
 
-<boolean> ::= "true"
-            | "false"
+<params>          ::= <identifier>
+                    { "," <identifier> }
 
-<integer> ::= <digit>
-            { <digit> } 
+<boolean>         ::= "true"
+                    | "false"
 
-<identifier> ::= <letter>
-                 { <letter> | <digit> | "_" }
+<integer>         ::= <digit>
+                    { <digit> } 
 
-<letter> ::= "a" | ... | "z"
-           | "A" | ... | "Z"
+<identifier>      ::= <letter>
+                    { <letter> | <digit> | "_" }
 
-<digit> ::= "0" | "1" | "2" | "3" | "4"
-          | "5" | "6" | "7" | "8" | "9"
+<letter>          ::= "a" | ... | "z"
+                    | "A" | ... | "Z"
+
+<digit>           ::= "0" | "1" | "2" | "3" | "4"
+                    | "5" | "6" | "7" | "8" | "9"
