@@ -816,8 +816,13 @@ class Evaluator:
 
             if value is True:
                 print("true")
+
             elif value is False:
                 print("false")
+
+            elif isinstance(value, Closure):
+                print("<function>")
+
             else:
                 print(value)
 
@@ -882,6 +887,13 @@ class Evaluator:
         left = self.eval(node.left, env)
         right = self.eval(node.right, env)
 
+        if node.op in ("+", "-", "*", "/"):
+
+            if type(left) is not int or type(right) is not int:
+                raise Exception(
+                    f"Type error: arithmetic requires integers"
+                )
+
         if node.op == "+":
             return left + right
 
@@ -897,6 +909,11 @@ class Evaluator:
                 raise Exception("Division by zero")
 
             return int(left / right)
+
+        if node.op in ("<", ">", "<=", ">="):
+
+            if type(left) is not int or type(right) is not int:
+                raise Exception("Type error: comparison requires integers")
 
         if node.op == "==":
             return left == right
@@ -916,6 +933,11 @@ class Evaluator:
         if node.op == ">=":
             return left >= right
 
+        if node.op in ("and", "or"):
+
+            if type(left) is not bool or type(right) is not bool:
+                raise Exception("Type error: logical operators require booleans")
+
         if node.op == "and":
             return left and right
 
@@ -929,9 +951,21 @@ class Evaluator:
         value = self.eval(node.expr, env)
 
         if node.op == "-":
+
+            if type(value) is not int:
+                raise Exception(
+                    "Type error: unary minus requires integer"
+                )
+
             return -value
 
         if node.op == "not":
+
+            if type(value) is not bool:
+                raise Exception(
+                    "Type error: not requires boolean"
+                )
+
             return not value
 
         raise Exception(f"Unknown unary operator {node.op}")

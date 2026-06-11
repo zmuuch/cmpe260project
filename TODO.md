@@ -1,6 +1,4 @@
-- let the program print errors to stderr
 - do the report
 - compare bnf documents
-- check other stuff before submission
 - examples folder
 - ast
