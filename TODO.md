@@ -1,0 +1,1 @@
+[ ] the current EBNF file contains the EBNF for the bonus features as well. in the end, if we are not to implement them, we should remove those parts.
