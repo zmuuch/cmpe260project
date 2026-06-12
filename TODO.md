@@ -1,4 +1,0 @@
-- do the report
-- compare bnf documents
-- examples folder
-- ast
